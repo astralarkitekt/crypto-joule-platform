@@ -1,6 +1,6 @@
 <template>
   <main>
-    <div class="loading">
+    <div class="loading" v-if="loading">
       <h1 v-if="loading">
         <img src="/crypto-joule-logo.png" alt="Crypto-Joule Tri-Quanta Forces" class="logo" />
         LOADING...
@@ -71,7 +71,7 @@ export default {
       this.$router.push({ name: "visualizer" });
     }
 
-    const explorer = new CryptoJouleExplorer('#explorer', txn, joule);
+    const explorer = new CryptoJouleExplorer('#explorer', txn, joule, this.cjStore.blockInfo);
     
     setTimeout(() => {
       gsap.to('#explorer', { opacity: 1, duration: 1 });
