@@ -1,4 +1,5 @@
 import CryptoJS from 'crypto-js';
+import { hashCycle } from './hashCycle.js';
 import TriQuanta from './TriQuanta';
 
 export default class CryptoJouleLocator {

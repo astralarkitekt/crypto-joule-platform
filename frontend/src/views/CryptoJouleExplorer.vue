@@ -65,10 +65,13 @@ export default {
     // cryptoJoules with object(s) that have the properties index and parcel
     // properties, which are both numbers 
     const joule = this.cjStore.getCryptoJoule(parseInt(this.txIndex), parseInt(this.byteIndex));
+    const txn = await this.cjStore.getParcelData(parseInt(this.txIndex));
 
-    console.log("Located Joule is: ", joule);
+    if( !joule || !txn ) {
+      this.$router.push({ name: "visualizer" });
+    }
 
-    const explorer = new CryptoJouleExplorer('#explorer');
+    const explorer = new CryptoJouleExplorer('#explorer', txn, joule);
     
     setTimeout(() => {
       gsap.to('#explorer', { opacity: 1, duration: 1 });

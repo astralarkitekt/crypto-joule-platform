@@ -76,6 +76,17 @@ app.get('/api/crypto-joules/:blockHeight', async (req, res) => {
   }
 });
 
+// get transaction data for the given hash
+app.get('/api/transaction/:txid', async (req, res) => {
+  const txid = req.params.txid;
+  try {
+    const tx = await client.getRawTransaction(txid, true);
+    res.json(tx);
+  } catch (error) {
+    res.status(500).send(error.toString());
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
