@@ -1,26 +1,43 @@
 <template>
   <header v-if="showHeader">
-    <img src="/crypto-joule-logo.png" alt="Crypto-Joule Tri-Quanta Forces" class="logo" />
+    <img
+      src="/crypto-joule-logo.png"
+      alt="Crypto-Joule Tri-Quanta Forces"
+      class="logo"
+    />
     <h1>Crypto-Joule:<small>Terraform Your Bitmap</small></h1>
   </header>
-  
+  <div class="error" v-if="error">
+    <h2>ERROR:</h2>
+    <pre>{{ error }}</pre>
+  </div>
   <RouterView />
 </template>
 <script>
-import { RouterLink, RouterView } from 'vue-router'
+import { useRoute } from "vue-router";
+import { ref, onMounted, watch } from "vue";
+import { useCryptoJouleStore } from "@/stores/CryptoJouleStore.js";
+
 export default {
+  data() {
+    return {
+      error: null,
+    };
+  },
   computed: {
     showHeader() {
-      return this.$route.name !== 'visualizer'
-    }
+      return (
+        this.$route.name !== "visualizer" && this.$route.name !== "explore"
+      );
+    },
   },
-}
+};
 </script>
 <style scoped>
 header {
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   line-height: 1.5;
   max-height: 100vh;
   width: 100%;
@@ -28,12 +45,13 @@ header {
   img {
     width: auto;
     max-height: 128px;
+    margin-top: 1rem;
   }
 
   h1 {
     padding-top: 1.5rem;
-    font-size: 4rem;
-    line-height: 0.67em;
+    font-size: 3rem;
+    line-height: 1em;
     margin: 0;
     color: var(--color-primary);
 

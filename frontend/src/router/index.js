@@ -10,12 +10,20 @@ const router = createRouter({
       component: HomeView
     },
     {
+      path: '/view/:blockHeight',
+      name: 'visualizer', 
+      component: () => import('../views/CryptoJouleVisualizer.vue'),
+      props: true
+    },
+    {
+      path: '/explore/:blockHeight/:txIndex/:byteIndex',
+      name: 'explore',
+      component: () => import('../views/CryptoJouleExplorer.vue'),
+      props: true
+    },
+    {
       path: '/:blockHeight',
-      name: 'visualizer',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/CryptoJouleVisualizer.vue')
+      redirect: { name: 'visualizer' }
     }
   ]
 })

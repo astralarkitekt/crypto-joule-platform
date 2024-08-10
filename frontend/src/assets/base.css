@@ -52,14 +52,6 @@
   }
 }
 
-/* import Tsing font from public, it's a woff2 file */
-@font-face {
-  font-family: 'Tsing';
-  src: url('/Tsing.woff2') format('woff2');
-  font-weight: normal;
-  font-style: normal;
-}
-
 *,
 *::before,
 *::after {
@@ -83,7 +75,7 @@ body {
     background-color 0.5s;
   line-height: 1.6;
   font-family:
-    Poppins,
+    'Montserrat',
     Inter,
     -apple-system,
     BlinkMacSystemFont,
@@ -103,5 +95,5 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Tsing', sans-serif;
+  font-family: 'Major Mono Display', sans-serif;
 }
