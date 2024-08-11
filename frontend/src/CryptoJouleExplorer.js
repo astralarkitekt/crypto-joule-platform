@@ -1,22 +1,14 @@
-import { hashCycle } from "../../src/lib/hashCycle.js";
-import ByteModalities from "../../src/lib/ByteModalities.js";
-
 import * as THREE from "three";
-// get sky and water
-import { Sky } from "three/examples/jsm/objects/Sky.js";
 import { Water } from "three/examples/jsm/objects/Water.js";
-// I want a soft bloom effect
+import { Sky } from "three/examples/jsm/objects/Sky.js";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
-
-import { createNoise2D, createNoise3D } from "simplex-noise";
+import { PointerLockControls } from "three/examples/jsm/controls/PointerLockControls.js";
+import { createNoise2D } from "simplex-noise";
 import alea from "alea";
-
-// first person controls
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-
-
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 
 export default class CryptoJouleExplorer {
   constructor(container, txnData, cryptoJoule, blockInfo) {
@@ -38,7 +30,6 @@ export default class CryptoJouleExplorer {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-    // is it appropriate to set up passes here? I want to add a bloom effect
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
     const bloomPass = new UnrealBloomPass(
@@ -49,7 +40,6 @@ export default class CryptoJouleExplorer {
     );
     this.composer.addPass(bloomPass);
 
-    // Append the renderer's canvas to the container
     if (typeof container === "string") {
       document
         .getElementById(container.replace("#", ""))
@@ -58,33 +48,100 @@ export default class CryptoJouleExplorer {
       container.appendChild(this.renderer.domElement);
     }
 
-    this.camera.position.x = -841.8949;
-    this.camera.position.y = 263.6994;
-    this.camera.position.z = -138.2921;
+    this.camera.position.set(-841.8949, 263.6994, -138.2921);
+    this.loadModel();
 
-    // Add orbit controls
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.25;
-    this.controls.enableZoom = true;
-    // limit the orbit controls so you can pan down to the water level
-    this.controls.maxPolarAngle = Math.PI / 2.1;
+    this.controls = new PointerLockControls(
+      this.camera,
+      this.renderer.domElement
+    );
+    this.scene.add(this.controls.getObject());
 
     this.init();
+
+    this.moveForward = false;
+    this.moveBackward = false;
+    this.moveLeft = false;
+    this.moveRight = false;
+    this.velocity = new THREE.Vector3();
+    this.direction = new THREE.Vector3();
+    this.prevTime = performance.now();
+
+    this.animate = this.animate.bind(this);
+    this.animate();
+
+    this.addEventListeners();
+  }
+
+  addEventListeners() {
+    const onKeyDown = (event) => {
+      switch (event.code) {
+        case "KeyW":
+          this.moveForward = true;
+          break;
+        case "KeyS":
+          this.moveBackward = true;
+          break;
+        case "KeyA":
+          this.moveLeft = true;
+          break;
+        case "KeyD":
+          this.moveRight = true;
+          break;
+      }
+    };
+
+    const onKeyUp = (event) => {
+      switch (event.code) {
+        case "KeyW":
+          this.moveForward = false;
+          break;
+        case "KeyS":
+          this.moveBackward = false;
+          break;
+        case "KeyA":
+          this.moveLeft = false;
+          break;
+        case "KeyD":
+          this.moveRight = false;
+          break;
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keyup", onKeyUp);
+    document.addEventListener("click", () => this.controls.lock());
+  }
+
+  loadModel() {
+    const loader = new GLTFLoader();
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath("/node_modules/three/examples/jsm/libs/draco/");
+    dracoLoader.setDecoderConfig({ type: "js" });
+    loader.setDRACOLoader(dracoLoader);
+    const theShip = "/models/harbinger-of-dawn-0.3.glb";
+    
+      loader.load(theShip, (gltf) => {
+        const ship = gltf.scene;
+        // copy the coordinates of the camera + z offset of 10
+        ship.position.copy(this.camera.position).add(new THREE.Vector3(0, -2, -10));
+        this.camera.add(ship);
+        this.scene.add(this.camera);
+        }, undefined, (error)=>{
+            console.error("GLTF Loader error: ", error);
+        });
   }
 
   init() {
-    // add an environment
     this.scene.fog = new THREE.FogExp2(0x000000, 0.00025);
 
-    // add lighting
     this.lighting = new THREE.HemisphereLight(0xffffbb, 0x080820, 1);
     this.scene.add(this.lighting);
-    // add a directional light
+
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
     directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
+    directionalLight.shadow.mapSize.width = 1024;
+    directionalLight.shadow.mapSize.height = 1024;
     directionalLight.shadow.camera.top = 1000;
     directionalLight.shadow.camera.bottom = -1000;
     directionalLight.shadow.camera.left = -1000;
@@ -124,14 +181,6 @@ export default class CryptoJouleExplorer {
 
     this.generateTerrain();
     this.scene.add(this.terrain);
-
-    // add a mousewheel event listener to console.log the camera position
-    window.addEventListener("wheel", () => {
-      console.log(this.camera.position);
-    });
-
-    this.animate = this.animate.bind(this);
-    this.animate();
   }
 
   getSoulBytes() {
@@ -139,8 +188,9 @@ export default class CryptoJouleExplorer {
   }
 
   generateTerrain() {
-    const { dominant, subdominant, tertiary } = this.cryptoJoule.triQuanta.getRanking();
-    
+    const { dominant, subdominant, tertiary } =
+      this.cryptoJoule.triQuanta.getRanking();
+
     const domPrng = alea(dominant);
     const subPrng = alea(subdominant);
     const terPrng = alea(tertiary);
@@ -149,13 +199,10 @@ export default class CryptoJouleExplorer {
     const subNoise = createNoise2D(subPrng);
     const terNoise = createNoise2D(terPrng);
 
-    
-    // use the txnData.size property to create a complex plane
     const size = this.txnData.size;
     const segments = size * 4;
     const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
 
-    // this generates the noise of the terrain
     for (let i = 0; i < geometry.attributes.position.count; i++) {
       const x = geometry.attributes.position.getX(i);
       const y = geometry.attributes.position.getY(i);
@@ -167,9 +214,12 @@ export default class CryptoJouleExplorer {
       const amplitudeScale2 = 3;
       const amplitudeScale3 = 2;
 
-      const noiseValue1 = domNoise(x * frequencyScale1, y * frequencyScale1) * amplitudeScale1;
-      const noiseValue2 = subNoise(x * frequencyScale2, y * frequencyScale2) * amplitudeScale2;
-      const noiseValue3 = terNoise(x * frequencyScale3, y * frequencyScale3) * amplitudeScale3;
+      const noiseValue1 =
+        domNoise(x * frequencyScale1, y * frequencyScale1) * amplitudeScale1;
+      const noiseValue2 =
+        subNoise(x * frequencyScale2, y * frequencyScale2) * amplitudeScale2;
+      const noiseValue3 =
+        terNoise(x * frequencyScale3, y * frequencyScale3) * amplitudeScale3;
 
       const combinedNoise = noiseValue1 + noiseValue2 + noiseValue3;
       geometry.attributes.position.setZ(i, combinedNoise);
@@ -187,30 +237,43 @@ export default class CryptoJouleExplorer {
     terrain.castShadow = true;
     terrain.rotation.x = -Math.PI / 2;
 
-    const scale = 10000 / size; // percentage of the size
-    
-    // scale the terrain up to 10000
+    const scale = 10000 / size;
     terrain.scale.set(scale, scale, scale);
 
     this.terrain.add(terrain);
   }
 
   animate() {
-    this.controls.update();
+    const time = performance.now();
+    const delta = (time - this.prevTime) / 1000;
 
-    // water
+    this.velocity.x -= this.velocity.x * 10.0 * delta;
+    this.velocity.z -= this.velocity.z * 10.0 * delta;
+
+    this.direction.z = Number(this.moveForward) - Number(this.moveBackward);
+    this.direction.x = Number(this.moveLeft) - Number(this.moveRight);
+    this.direction.normalize();
+
+    if (this.moveForward || this.moveBackward)
+      this.velocity.z -= this.direction.z * 2400.0 * delta;
+    if (this.moveLeft || this.moveRight)
+      this.velocity.x -= this.direction.x * 2400.0 * delta;
+
+    this.controls.getObject().translateX(this.velocity.x * delta);
+    this.controls.getObject().translateZ(this.velocity.z * delta);
+
+    this.prevTime = time;
+
     const water = this.scene.children.find((child) => child instanceof Water);
     if (water) {
       water.material.uniforms.time.value += 1.0 / 180.0;
     }
 
-    // animate the sun as though it's moving
     const sun = this.scene.children.find((child) => child instanceof Sky);
     if (sun) {
       sun.material.uniforms.sunPosition.value.x += 0.1;
     }
 
-    // bloom
     this.composer.render();
     window.requestAnimationFrame(this.animate.bind(this));
   }

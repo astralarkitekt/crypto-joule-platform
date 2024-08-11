@@ -12,7 +12,19 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      'three/examples/jsm/libs/draco': fileURLToPath(new URL('./node_modules/three/examples/jsm/libs/draco', import.meta.url)),
+    }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if(id.includes('draco')) {
+            return 'draco';
+          }
+        }
+      }
     }
   }
 })
