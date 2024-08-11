@@ -41,8 +41,8 @@ export default class CryptoJouleExplorer {
       container.appendChild(this.renderer.domElement);
     }
 
-    this.camera.position.z = 5;
-    this.camera.position.y = 10;
+    this.camera.position.z = 50;
+    this.camera.position.y = 100;
 
     // Add orbit controls
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -55,7 +55,7 @@ export default class CryptoJouleExplorer {
 
   init() {
     // add an environment
-    this.scene.fog = new THREE.Fog(0x000000, 1, 1000);
+    this.scene.fog = new THREE.FogExp2(0x000000, 0.00025);
 
     // add lighting
     this.lighting = new THREE.HemisphereLight(0xffffbb, 0x080820, 15);
@@ -84,8 +84,8 @@ export default class CryptoJouleExplorer {
         }),
         alpha: 1.0,
         sunDirection: this.lighting.position.clone().normalize(),
-        sunColor: 0xffffff,
-        waterColor: 0x001e0f,
+        sunColor: 0xff9900,
+        waterColor: 0x00ffff,
         distortionScale: 3.7,
         fog: this.scene.fog !== undefined
     });
@@ -175,9 +175,9 @@ export default class CryptoJouleExplorer {
       const byteModalities = ByteModalities.getModalitiesForByte(index, terrainSize, soulInt);
       
       // Ensure byteModalities values are valid numbers
-      const width = (byteModalities[0].value / 255) + 1;
-      const depth = (byteModalities[0].value / 255) + 1;
-      const height = (byteModalities[5].value / 255) + 1;
+      const width = byteModalities[0].value + 1;
+      const depth = byteModalities[0].value + 1;
+      const height = byteModalities[5].value + 1;
       const color = (byteModalities[8].value / 255) * 360;
       
       if (isNaN(width) || isNaN(depth) || isNaN(height)) {
@@ -187,12 +187,14 @@ export default class CryptoJouleExplorer {
   
     //   console.log(`Positioning cube ${i} at xOffset: ${xOffset}, yOffset: ${height / 2}, zOffset: ${zOffset}`);
     cubes.setMatrixAt(i, new THREE.Matrix4().makeScale(width, height, depth));
+    
     cubes.setColorAt(i, new THREE.Color(`hsl(${color}, 50%, 50%)`));
+    
       cubes.setMatrixAt(i, new THREE.Matrix4().makeTranslation(xOffset, height / 2, zOffset));
-      cubes.instanceMatrix.needsUpdate = true;
+      
   
       xOffset += width;
-      if (xOffset >= this.txnData.size) {
+      if (xOffset >= Math.sqrt(this.txnData.size) * 3) {
         xOffset = 0;
         zOffset += depth;
       }
@@ -222,6 +224,15 @@ export default class CryptoJouleExplorer {
 
   animate() {
     this.controls.update();
+
+    // water
+    const water = this.scene.children.find((child) => child instanceof Water);
+    if (water) {
+      water.material.uniforms.time.value += 1.0 / 180.0;
+    }
+
+
+
     this.renderer.render(this.scene, this.camera);
     window.requestAnimationFrame(this.animate.bind(this));
   }
