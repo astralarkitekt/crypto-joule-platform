@@ -207,12 +207,12 @@ export default class CryptoJouleExplorer {
       const x = geometry.attributes.position.getX(i);
       const y = geometry.attributes.position.getY(i);
 
-      const frequencyScale1 = 0.05;
+      const frequencyScale1 = 0.0015;
       const frequencyScale2 = 0.1;
       const frequencyScale3 = 0.015;
-      const amplitudeScale1 = 5;
-      const amplitudeScale2 = 3;
-      const amplitudeScale3 = 2;
+      const amplitudeScale1 = 15;
+      const amplitudeScale2 = 1;
+      const amplitudeScale3 = 10;
 
       const noiseValue1 =
         domNoise(x * frequencyScale1, y * frequencyScale1) * amplitudeScale1;
