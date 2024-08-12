@@ -23,7 +23,7 @@ export default class CryptoJouleExplorer {
       75,
       window.innerWidth / window.innerHeight,
       0.1,
-      100000
+      10000
     );
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -49,6 +49,7 @@ export default class CryptoJouleExplorer {
     }
 
     this.camera.position.set(-841.8949, 263.6994, -138.2921);
+    this.camera.rotateY(Math.PI / 2);
     this.loadModel();
 
     this.controls = new PointerLockControls(
@@ -124,9 +125,11 @@ export default class CryptoJouleExplorer {
       loader.load(theShip, (gltf) => {
         const ship = gltf.scene;
         // copy the coordinates of the camera + z offset of 10
-        ship.position.copy(this.camera.position).add(new THREE.Vector3(0, -2, -10));
-        this.camera.add(ship);
-        this.scene.add(this.camera);
+        ship.position.copy(this.camera.position).add(new THREE.Vector3(-1, -2, -10));
+        ship.rotation.y = Math.PI;
+        ship.scale.set(0.1, 0.1, 0.1);
+        this.ship = ship;
+        this.scene.add(this.ship);
         }, undefined, (error)=>{
             console.error("GLTF Loader error: ", error);
         });
@@ -172,9 +175,10 @@ export default class CryptoJouleExplorer {
       alpha: 1.0,
       sunDirection: this.lighting.position.clone().normalize(),
       sunColor: 0xff9900,
-      waterColor: 0x00ffff,
+      waterColor: `#${this.hexInvert(this.cryptoJoule.triQuanta.getTriQuanta())}`,
       distortionScale: 3.7,
       fog: this.scene.fog !== undefined,
+      side: THREE.DoubleSide,
     });
     water.rotation.x = -Math.PI / 2;
     this.scene.add(water);
@@ -186,6 +190,93 @@ export default class CryptoJouleExplorer {
   getSoulBytes() {
     return this.cryptoJoule.triQuanta.soulSignature.match(/.{2}/g);
   }
+
+  generateAlphaMap() {
+    const canvas = document.createElement('canvas');
+    const size = 512;
+    canvas.width = size;
+    canvas.height = size;
+    const context = canvas.getContext('2d');
+  
+    // Ensure the entire canvas is transparent
+    context.clearRect(0, 0, size, size);
+  
+    // Draw rectangles (structures) with partial transparency
+    const maxRectSize = size * 0.1; // No greater than 10% of the canvas size
+    for (let i = 0; i < 100; i++) {
+      context.fillStyle = `rgba(255, 255, 255, 0.7)`;
+      const width = Math.random() * maxRectSize;
+      const height = Math.random() * maxRectSize;
+      context.fillRect(Math.random() * size, Math.random() * size, width, height);
+    }
+  
+    // Draw points of light with full opacity
+    for (let i = 0; i < 200; i++) {
+      context.fillStyle = `rgba(255, 255, 255, 1)`;
+      const x = Math.random() * size;
+      const y = Math.random() * size;
+      context.beginPath();
+      context.arc(x, y, Math.random() * 3, 0, Math.PI * 2);
+      context.fill();
+    }
+  
+    const alphaMap = new THREE.CanvasTexture(canvas);
+    alphaMap.wrapS = THREE.RepeatWrapping;
+    alphaMap.wrapT = THREE.RepeatWrapping;
+    alphaMap.repeat.set(12, 12); // Repeat 12 times on x and y
+  
+    return alphaMap;
+  }
+
+  hexInvert(hex) {
+    // given a 3-byte hex color, return the inverted color
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    const inverted = [r, g, b].map((c) => 255 - c);
+    return inverted.map((c) => c.toString(16).padStart(2, '0')).join('');
+  }
+  
+  generateTexture() {
+    const canvas = document.createElement('canvas');
+    const size = 512;
+    canvas.width = size;
+    canvas.height = size;
+    const context = canvas.getContext('2d');
+  
+    // fill canvas with triquanta color
+    context.fillStyle = `#${this.cryptoJoule.triQuanta.getTriQuanta()}`;
+    context.fillRect(0, 0, size, size);
+  
+    // Draw rectangles (structures) with partial transparency
+    const maxRectSize = size * 0.025; // No greater than 10% of the canvas size
+    for (let i = 0; i < size; i++) {
+      context.fillStyle = `rgba(0, ${Math.floor(Math.random() * 128)}, 0, 1)`; // Adjust alpha for transparency
+      const width = Math.random() * maxRectSize;
+      const height = Math.random() * maxRectSize;
+      context.fillRect(Math.random() * size, Math.random() * size, width, height);
+    }
+  
+    // Draw points of light with full opacity
+    for (let i = 0; i < 200; i++) {
+      context.fillStyle = `rgba(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, 1)`;
+      const x = Math.random() * size;
+      const y = Math.random() * size;
+      context.beginPath();
+      context.arc(x, y, Math.random() * 3, 0, Math.PI * 2);
+      context.fill();
+    }
+  
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(12, 12); // Repeat 12 times on x and y
+  
+    return texture;
+  }
+  
+  
+  
 
   generateTerrain() {
     const { dominant, subdominant, tertiary } =
@@ -199,7 +290,7 @@ export default class CryptoJouleExplorer {
     const subNoise = createNoise2D(subPrng);
     const terNoise = createNoise2D(terPrng);
 
-    const size = this.txnData.size;
+    const size = (this.txnData.size > 0) ? this.txnData.size : 1;
     const segments = size * 4;
     const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
 
@@ -227,9 +318,13 @@ export default class CryptoJouleExplorer {
 
     geometry.attributes.position.needsUpdate = true;
     geometry.computeVertexNormals();
-
+    const texture = this.generateTexture();
+    const alphaMap = this.generateAlphaMap();
     const material = new THREE.MeshStandardMaterial({
-      color: 0x009900,
+      color: `#${this.cryptoJoule.triQuanta.getTriQuanta()}`,
+      map: texture,
+      // alphaMap: alphaMap,
+      // transparent: true,
       side: THREE.DoubleSide,
     });
     const terrain = new THREE.Mesh(geometry, material);
@@ -269,9 +364,22 @@ export default class CryptoJouleExplorer {
       water.material.uniforms.time.value += 1.0 / 180.0;
     }
 
+    // Synchronize the ship's position and rotation with the camera
+  if (this.ship) {
+    const cameraPosition = new THREE.Vector3();
+    this.camera.getWorldPosition(cameraPosition);
+    this.ship.position.copy(cameraPosition);
+    this.ship.position.add(this.camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(10)); // Offset in front of the camera
+
+    const cameraRotation = new THREE.Euler();
+    cameraRotation.copy(this.camera.rotation);
+    cameraRotation.y += Math.PI; // Adjust rotation to face forward
+    this.ship.setRotationFromEuler(cameraRotation);
+  }
+
     const sun = this.scene.children.find((child) => child instanceof Sky);
     if (sun) {
-      sun.material.uniforms.sunPosition.value.x += 0.1;
+      sun.material.uniforms.sunPosition.value.x += 0.01;
     }
 
     this.composer.render();
