@@ -10,6 +10,8 @@ import alea from "alea";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 
+import ByteModalities from "../../src/lib/ByteModalities";
+
 export default class CryptoJouleExplorer {
   constructor(container, txnData, cryptoJoule, blockInfo) {
     this.container = container;
@@ -121,18 +123,25 @@ export default class CryptoJouleExplorer {
     dracoLoader.setDecoderConfig({ type: "js" });
     loader.setDRACOLoader(dracoLoader);
     const theShip = "/models/harbinger-of-dawn-0.3.glb";
-    
-      loader.load(theShip, (gltf) => {
+
+    loader.load(
+      theShip,
+      (gltf) => {
         const ship = gltf.scene;
         // copy the coordinates of the camera + z offset of 10
-        ship.position.copy(this.camera.position).add(new THREE.Vector3(-1, -2, -10));
+        ship.position
+          .copy(this.camera.position)
+          .add(new THREE.Vector3(-1, -2, -10));
         ship.rotation.y = Math.PI;
         ship.scale.set(0.1, 0.1, 0.1);
         this.ship = ship;
         this.scene.add(this.ship);
-        }, undefined, (error)=>{
-            console.error("GLTF Loader error: ", error);
-        });
+      },
+      undefined,
+      (error) => {
+        console.error("GLTF Loader error: ", error);
+      }
+    );
   }
 
   init() {
@@ -175,7 +184,9 @@ export default class CryptoJouleExplorer {
       alpha: 1.0,
       sunDirection: this.lighting.position.clone().normalize(),
       sunColor: 0xff9900,
-      waterColor: `#${this.hexInvert(this.cryptoJoule.triQuanta.getTriQuanta())}`,
+      waterColor: `#${this.hexInvert(
+        this.cryptoJoule.triQuanta.getTriQuanta()
+      )}`,
       distortionScale: 3.7,
       fog: this.scene.fog !== undefined,
       side: THREE.DoubleSide,
@@ -192,24 +203,29 @@ export default class CryptoJouleExplorer {
   }
 
   generateAlphaMap() {
-    const canvas = document.createElement('canvas');
+    const canvas = document.createElement("canvas");
     const size = 512;
     canvas.width = size;
     canvas.height = size;
-    const context = canvas.getContext('2d');
-  
+    const context = canvas.getContext("2d");
+
     // Ensure the entire canvas is transparent
     context.clearRect(0, 0, size, size);
-  
+
     // Draw rectangles (structures) with partial transparency
     const maxRectSize = size * 0.1; // No greater than 10% of the canvas size
     for (let i = 0; i < 100; i++) {
       context.fillStyle = `rgba(255, 255, 255, 0.7)`;
       const width = Math.random() * maxRectSize;
       const height = Math.random() * maxRectSize;
-      context.fillRect(Math.random() * size, Math.random() * size, width, height);
+      context.fillRect(
+        Math.random() * size,
+        Math.random() * size,
+        width,
+        height
+      );
     }
-  
+
     // Draw points of light with full opacity
     for (let i = 0; i < 200; i++) {
       context.fillStyle = `rgba(255, 255, 255, 1)`;
@@ -219,12 +235,12 @@ export default class CryptoJouleExplorer {
       context.arc(x, y, Math.random() * 3, 0, Math.PI * 2);
       context.fill();
     }
-  
+
     const alphaMap = new THREE.CanvasTexture(canvas);
     alphaMap.wrapS = THREE.RepeatWrapping;
     alphaMap.wrapT = THREE.RepeatWrapping;
     alphaMap.repeat.set(12, 12); // Repeat 12 times on x and y
-  
+
     return alphaMap;
   }
 
@@ -234,49 +250,58 @@ export default class CryptoJouleExplorer {
     const g = parseInt(hex.slice(2, 4), 16);
     const b = parseInt(hex.slice(4, 6), 16);
     const inverted = [r, g, b].map((c) => 255 - c);
-    return inverted.map((c) => c.toString(16).padStart(2, '0')).join('');
+    return inverted.map((c) => c.toString(16).padStart(2, "0")).join("");
   }
-  
+
   generateTexture() {
-    const canvas = document.createElement('canvas');
+    const canvas = document.createElement("canvas");
     const size = 512;
     canvas.width = size;
     canvas.height = size;
-    const context = canvas.getContext('2d');
-  
+    const context = canvas.getContext("2d");
+
     // fill canvas with triquanta color
     context.fillStyle = `#${this.cryptoJoule.triQuanta.getTriQuanta()}`;
     context.fillRect(0, 0, size, size);
-  
-    // Draw rectangles (structures) with partial transparency
-    const maxRectSize = size * 0.025; // No greater than 10% of the canvas size
-    for (let i = 0; i < size; i++) {
-      context.fillStyle = `rgba(0, ${Math.floor(Math.random() * 128)}, 0, 1)`; // Adjust alpha for transparency
-      const width = Math.random() * maxRectSize;
-      const height = Math.random() * maxRectSize;
-      context.fillRect(Math.random() * size, Math.random() * size, width, height);
-    }
-  
-    // Draw points of light with full opacity
-    for (let i = 0; i < 200; i++) {
-      context.fillStyle = `rgba(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, 1)`;
-      const x = Math.random() * size;
-      const y = Math.random() * size;
+
+    // Get Merkle Root bytes
+    const merkleRoot = this.cryptoJoule.triQuanta.soulSignature;
+    const byteModalities = new ByteModalities(
+      merkleRoot,
+      this.blockInfo.blockHash,
+      this.blockInfo.blockTime
+    );
+
+    // Explode Merkle root into 32 bytes
+    const bytes = byteModalities.bytes;
+
+    // Iterate over each byte to generate circles
+    bytes.forEach((byte, index) => {
+      const x = byteModalities.getModality("Noetic", index);
+      const y = byteModalities.getModality("Shadow", index);
+      const radius = byteModalities.getModality("Cowl", index) + 1; // Ensure the radius is between 1 and 256
+
+      // Scale X and Y to fit the canvas size
+      const scaledX = (x / 255) * size;
+      const scaledY = (y / 255) * size;
+      const scaledRadius = (radius / 255) * 256;
+
+      // Draw the circle
       context.beginPath();
-      context.arc(x, y, Math.random() * 3, 0, Math.PI * 2);
-      context.fill();
-    }
-  
+      context.arc(scaledX, scaledY, scaledRadius, 0, Math.PI * 2);
+      context.strokeStyle = "rgba(255, 215, 0, 1)"; // Gold color
+      context.lineWidth = 1;
+      context.stroke();
+      context.closePath();
+    });
+
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(12, 12); // Repeat 12 times on x and y
-  
+
     return texture;
   }
-  
-  
-  
 
   generateTerrain() {
     const { dominant, subdominant, tertiary } =
@@ -290,7 +315,7 @@ export default class CryptoJouleExplorer {
     const subNoise = createNoise2D(subPrng);
     const terNoise = createNoise2D(terPrng);
 
-    const size = (this.txnData.size > 0) ? this.txnData.size : 1;
+    const size = this.txnData.size > 0 ? this.txnData.size : 1;
     const segments = size * 4;
     const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
 
@@ -365,17 +390,19 @@ export default class CryptoJouleExplorer {
     }
 
     // Synchronize the ship's position and rotation with the camera
-  if (this.ship) {
-    const cameraPosition = new THREE.Vector3();
-    this.camera.getWorldPosition(cameraPosition);
-    this.ship.position.copy(cameraPosition);
-    this.ship.position.add(this.camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(10)); // Offset in front of the camera
+    if (this.ship) {
+      const cameraPosition = new THREE.Vector3();
+      this.camera.getWorldPosition(cameraPosition);
+      this.ship.position.copy(cameraPosition);
+      this.ship.position.add(
+        this.camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(10)
+      ); // Offset in front of the camera
 
-    const cameraRotation = new THREE.Euler();
-    cameraRotation.copy(this.camera.rotation);
-    cameraRotation.y += Math.PI; // Adjust rotation to face forward
-    this.ship.setRotationFromEuler(cameraRotation);
-  }
+      const cameraRotation = new THREE.Euler();
+      cameraRotation.copy(this.camera.rotation);
+      cameraRotation.y += Math.PI; // Adjust rotation to face forward
+      this.ship.setRotationFromEuler(cameraRotation);
+    }
 
     const sun = this.scene.children.find((child) => child instanceof Sky);
     if (sun) {

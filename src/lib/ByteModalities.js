@@ -116,29 +116,29 @@ class ByteModalities {
 
     switch (modalityName) {
       case "Noetic":
-        return this.wrapValue(byteValue + soulByte);
+        return ByteModalities.wrapValue(byteValue + soulByte);
       case "Shadow":
-        return this.wrapValue(255 - byteValue + soulByte);
+        return ByteModalities.wrapValue(255 - byteValue + soulByte);
       case "Cowl":
-        return this.wrapValue(
+        return ByteModalities.wrapValue(
           255 - Math.abs(byteValue - (255 - byteValue)) + soulByte
         );
       case "Light":
-        return this.wrapValue(
+        return ByteModalities.wrapValue(
           Math.floor(Math.pow(byteValue, 2) / 255) + soulByte
         );
       case "Reflection":
-        return this.wrapValue(Math.abs(byteValue - 128) + soulByte);
+        return ByteModalities.wrapValue(Math.abs(byteValue - 128) + soulByte);
       case "Amplifier":
-        return this.wrapValue(byteValue * (index + 1) + soulByte);
+        return ByteModalities.wrapValue(byteValue * (index + 1) + soulByte);
       case "Echo":
-        return this.wrapValue(Math.max(byteValue - index * 8, 0) + soulByte);
+        return ByteModalities.wrapValue(Math.max(byteValue - index * 8, 0) + soulByte);
       case "Harmonic":
-        return this.wrapValue(byteValue * 2 * (index + 1) + soulByte);
+        return ByteModalities.wrapValue(byteValue * 2 * (index + 1) + soulByte);
       case "Spectral":
-        return this.wrapValue((255 - byteValue) * (index + 1) + soulByte);
+        return ByteModalities.wrapValue((255 - byteValue) * (index + 1) + soulByte);
       case "Dissonance":
-        return this.wrapValue(
+        return ByteModalities.wrapValue(
           Math.abs(byteValue - 128) * (index + 1) + soulByte
         );
       default:
